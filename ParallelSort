@@ -1,0 +1,194 @@
+/**
+ * 
+ */
+
+import java.util.concurrent.ForkJoinPool;
+import java.util.concurrent.RecursiveAction;
+import java.util.*;
+import java.lang.*;
+
+/**
+ * @author Tres
+ * 
+ */
+public class ParallelSort<T extends Comparable<T>> 
+
+extends RecursiveAction {
+
+	private static final int INSERT_SIZE = 15;
+	private static final int RECURSE_MAX = 500;
+	int start, end, recurse;
+	T[] arr;
+
+	/**
+	 * @see 
+
+java.util.concurrent.RecursiveAction#compute() Sorts 
+
+from [start,
+	 *      end)
+	 */
+	public ParallelSort(int start, int end, T[] 
+
+arr, int recurse) {
+		this.arr = arr;
+		this.recurse = recurse;
+		this.start = start;
+		this.end = end - 1;
+	}
+
+	public ParallelSort(T[] arr) {
+		this.arr = arr;
+		start = 0;
+		end = arr.length - 1;
+		recurse = 0;
+	}
+
+	public void sort() {
+		ForkJoinPool fjp = new ForkJoinPool();
+		fjp.invoke(new ParallelSort<T>(start, 
+
+end + 1, arr, recurse));
+	}
+
+	protected void compute() {
+		if ((end - start) < INSERT_SIZE)
+			insertionSort();
+		else if (recurse > RECURSE_MAX)
+			heapSort();
+		else
+			quickSort();
+	}
+
+	private void quickSort() {
+		// set pivots
+		int third = (end - start) / 3;
+		int left = start + third;
+		int right = end - third;
+		if (arr[left].compareTo(arr[right]) > 
+
+0) { // swap pivots
+			swap(left, right);
+		}
+		// swap pivots to outside
+
+		swap(start, left);
+		swap(right, end);
+		T p = arr[start], q = arr[end];
+		int l = start + 1, g = end - 1, k = l;
+		while (k <= g) {
+			if (arr[k].compareTo(p) < 0) {
+				swap(k, l);
+				l++;
+			} else if (arr[k].compareTo(q) 
+
+>= 0) {
+				while ((arr
+
+[g].compareTo(q) > 0) && (k < g)) {
+					g--;
+				}
+				swap(k, g);
+				g--;
+				if (arr[k].compareTo(p) 
+
+< 0) {
+					swap(k, l);
+					l++;
+				}
+			}
+			k++;
+		}
+		l--;
+		g++;
+		recurse++;
+		swap(start, l);
+		swap(end, g);
+		invokeAll(new ParallelSort<T>(start, l, 
+
+arr, recurse),
+				new ParallelSort<T>(l + 
+
+1, g, arr, recurse),
+				new ParallelSort<T>(g + 
+
+1, end + 1, arr, recurse));
+	}
+
+	private void heapSort() {
+		heapify();
+		int i = end;
+		while (i > 0) {
+			swap(end, 0);
+			i--;
+			siftDown(start, i);
+		}
+
+	}
+
+	private void heapify() {
+		int begin;
+		begin = start + ((end - start - 1) / 
+
+2);
+		while (begin >= start) {
+			siftDown(begin, end);
+			begin--;
+		}
+
+	}
+
+	private void siftDown(int begin, int end) {
+		int root = begin;
+		int child, swap;
+		while ((root * 2 + 1) < end) {
+			child = root * 2 + 1;
+			swap = root;
+			if (arr[swap].compareTo(arr
+
+[child]) < 0) {
+				swap = child;
+			}
+			if ((child + 1 <= end) && (arr
+
+[swap].compareTo(arr[child + 1]) < 0)) {
+				swap = child + 1;
+			}
+			if (swap != root) {
+				swap(root, swap);
+				root = swap;
+			} else
+				return;
+		}
+	}
+
+	private void insertionSort() {
+		T temp;
+		int current;
+		for (int i = start + 1; i <= end; i++) 
+
+{
+			temp = arr[i];
+			current = i;
+			while ((current > 0) && 
+
+(temp.compareTo(arr[current - 1]) < 0)) {
+				arr[current] = arr
+
+[current - 1];
+				current--;
+			}
+			arr[current] = temp;
+		}
+	}
+
+	private void swap(int left, int right) {
+		// System.out.println(""+left+" 
+
+"+right+" "+arr[left]+" "+arr[right]);
+		T temp = arr[left];
+		arr[left] = arr[right];
+		arr[right] = temp;
+	}
+
+}
